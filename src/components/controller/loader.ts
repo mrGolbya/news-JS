@@ -1,5 +1,3 @@
-import { INewsResponse, ISourcesResponse } from 'src\types\index.ts';
-
 interface IRequestOptions {
     [key: string]: string;
 }
@@ -51,9 +49,9 @@ class Loader {
     }
 
     protected load<T>(
-        method: string, 
-        endpoint: string, 
-        callback: CallbackType<T>, 
+        method: string,
+        endpoint: string,
+        callback: CallbackType<T>,
         options: IRequestOptions = {}
     ): void {
         fetch(this.makeUrl(options, endpoint), { method })
