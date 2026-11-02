@@ -32,3 +32,8 @@ export interface ISourcesResponse {
     status: 'ok' | 'error';
     sources: ISource[];
 }
+
+export enum NewsEndpoint {
+    Sources = 'mocks/sources',
+    Everything = 'mocks/everything',
+}
