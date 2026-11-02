@@ -8,6 +8,7 @@ interface IGetRespParams {
 }
 
 type CallbackType<T> = (data: T) => void;
+type ErrorCallback = (error: Error) => void;
 
 class Loader {
     protected baseLink: string;
@@ -22,43 +23,55 @@ class Loader {
         { endpoint, options = {} }: IGetRespParams,
         callback: CallbackType<T> = () => {
             console.error('No callback for GET response');
-        }
+        },
+        errorCallback?: ErrorCallback
     ): void {
-        this.load('GET', endpoint, callback, options);
-    }
-
-    protected errorHandler(res: Response): Response {
-        if (!res.ok) {
-            if (res.status === 401 || res.status === 404)
-                console.log(`Sorry, but there is ${res.status} error: ${res.statusText}`);
-            throw Error(res.statusText);
-        }
-
-        return res;
+        this.load('GET', endpoint, callback, options, errorCallback);
     }
 
     protected makeUrl(options: IRequestOptions, endpoint: string): string {
+        const url = new URL(`${this.baseLink}${endpoint}`);
         const urlOptions: IRequestOptions = { ...this.options, ...options };
-        let url = `${this.baseLink}${endpoint}?`;
 
-        Object.keys(urlOptions).forEach((key: string) => {
-            url += `${key}=${urlOptions[key]}&`;
+        Object.entries(urlOptions).forEach(([key, value]) => {
+            url.searchParams.set(key, value);
         });
 
-        return url.slice(0, -1);
+        return url.toString();
+    }
+
+    protected getErrorMessage(data: unknown, fallback: string): string {
+        if (typeof data === 'object' && data !== null && 'message' in data && typeof data.message === 'string') {
+            return data.message;
+        }
+
+        return fallback;
     }
 
     protected load<T>(
         method: string,
         endpoint: string,
         callback: CallbackType<T>,
-        options: IRequestOptions = {}
+        options: IRequestOptions = {},
+        errorCallback?: ErrorCallback
     ): void {
         fetch(this.makeUrl(options, endpoint), { method })
-            .then((res: Response) => this.errorHandler(res))
-            .then((res: Response) => res.json())
+            .then(async (res: Response) => {
+                const data: unknown = await res.json();
+                if (!res.ok) {
+                    throw new Error(this.getErrorMessage(data, `${res.status} ${res.statusText}`));
+                }
+                return data as T;
+            })
             .then((data: T) => callback(data))
-            .catch((err: Error) => console.error(err));
+            .catch((err: unknown) => {
+                const error = err instanceof Error ? err : new Error(String(err));
+                if (errorCallback) {
+                    errorCallback(error);
+                } else {
+                    console.error(error);
+                }
+            });
     }
 }
 

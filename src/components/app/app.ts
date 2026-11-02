@@ -13,8 +13,14 @@ class App {
     private panelOpen = false;
     private previousBodyOverflow = '';
     private lastFocused: HTMLElement | null = null;
-    private initialSourceSearchStarted = false;
     private initialSourceSearchCancelled = false;
+    private liveSearchId = 0;
+    private liveApiKey: string | null = null;
+    private apiKeyForm: HTMLFormElement | null = null;
+    private apiKeyInput: HTMLInputElement | null = null;
+    private apiKeySubmit: HTMLButtonElement | null = null;
+    private demoButton: HTMLButtonElement | null = null;
+    private apiStatus: HTMLElement | null = null;
 
     constructor() {
         this.controller = new AppController();
@@ -26,6 +32,11 @@ class App {
         this.panel = document.getElementById('sources-panel');
         this.overlay = document.querySelector<HTMLButtonElement>('.sources-overlay');
         this.closeBtn = document.querySelector<HTMLButtonElement>('.sources-panel__close');
+        this.apiKeyForm = document.querySelector<HTMLFormElement>('.api-key-form');
+        this.apiKeyInput = document.querySelector<HTMLInputElement>('#api-key');
+        this.apiKeySubmit = document.querySelector<HTMLButtonElement>('.api-key-submit');
+        this.demoButton = document.querySelector<HTMLButtonElement>('.api-demo-button');
+        this.apiStatus = document.querySelector<HTMLElement>('.api-status');
         this.syncPanelLayout();
 
         const sourcesContainer = document.querySelector<HTMLElement>('.sources');
@@ -37,10 +48,23 @@ class App {
 
                 if (sourceId) {
                     this.initialSourceSearchCancelled = true;
+                    this.liveSearchId += 1;
                     this.view.selectSource(sourceId);
                 }
 
-                this.controller.getNews(e, (data) => this.view.drawNews(data));
+                this.controller.getNews(
+                    e,
+                    (data) => {
+                        this.view.drawNews(data);
+                        if (data.status === 'error') {
+                            this.setApiStatus(data.message ?? 'Could not load news.', true);
+                        } else if (this.liveApiKey) {
+                            this.setApiStatus('Live news loaded.');
+                        }
+                    },
+                    (error) => this.setApiStatus(error.message, true),
+                    this.liveApiKey ?? undefined
+                );
 
                 if (this.isMobile()) {
                     this.closePanel({ returnFocus: true });
@@ -51,6 +75,8 @@ class App {
         this.toggleBtn?.addEventListener('click', () => this.openPanel());
         this.closeBtn?.addEventListener('click', () => this.closePanel({ returnFocus: true }));
         this.overlay?.addEventListener('click', () => this.closePanel({ returnFocus: true }));
+        this.apiKeyForm?.addEventListener('submit', (e: SubmitEvent) => this.enableLiveMode(e));
+        this.demoButton?.addEventListener('click', () => this.enableDemoMode());
 
         document.addEventListener('keydown', (e: KeyboardEvent) => {
             if (e.key === 'Escape' && this.panelOpen) {
@@ -66,36 +92,198 @@ class App {
 
         window.addEventListener('resize', () => this.syncPanelLayout());
 
-        this.controller.getSources((data) => {
-            const sources: ISource[] = data?.sources ?? [];
-            this.view.drawSources(data);
+        this.controller.getSources(
+            (data) => {
+                const sources: ISource[] = data?.sources ?? [];
+                this.view.drawSources(data);
 
-            const sourcesContainer = document.querySelector<HTMLElement>('.sources');
-            if (sourcesContainer && sources.length > 0 && !this.initialSourceSearchStarted) {
-                this.initialSourceSearchStarted = true;
-                this.loadInitialSource(sources, 0, sourcesContainer);
-            }
-        });
+                const sourcesContainer = document.querySelector<HTMLElement>('.sources');
+                if (data.status === 'error') {
+                    this.setApiStatus(data.message ?? 'Could not load demo sources.', true);
+                } else if (sourcesContainer && sources.length > 0) {
+                    this.loadInitialSource(sources, sourcesContainer);
+                } else {
+                    this.setApiStatus('The demo did not return any sources.', true);
+                }
+            },
+            (error) => this.setApiStatus(error.message, true)
+        );
     }
 
-    private loadInitialSource(sources: ISource[], startIndex: number, sourcesContainer: HTMLElement): void {
-        if (this.initialSourceSearchCancelled) return;
+    private enableLiveMode(e: SubmitEvent): void {
+        e.preventDefault();
+        const apiKey = this.apiKeyInput?.value.trim();
+        if (!apiKey || !this.apiKeySubmit) {
+            this.setApiStatus('Enter your News API key to load live sources.', true);
+            this.apiKeyInput?.focus();
+            return;
+        }
 
-        const sourceIndex = sources.findIndex((source, index) => index >= startIndex && Boolean(source.id.trim()));
-        const source = sources[sourceIndex];
+        this.apiKeySubmit.disabled = true;
+        this.setApiStatus('Checking your key and loading live sources...');
+        this.controller.getSources(
+            (data) => {
+                this.apiKeySubmit!.disabled = false;
+                if (data.status !== 'ok' || data.sources.length === 0) {
+                    this.setApiStatus(data.message ?? 'No live sources were returned. Check your API key.', true);
+                    return;
+                }
+
+                this.controller.invalidateNewsRequests();
+                const searchId = ++this.liveSearchId;
+                this.initialSourceSearchCancelled = true;
+                const sourcesContainer = document.querySelector<HTMLElement>('.sources');
+                sourcesContainer?.removeAttribute('data-source');
+                sourcesContainer?.removeAttribute('data-source-pending');
+                if (!sourcesContainer) {
+                    this.apiKeySubmit!.disabled = false;
+                    this.setApiStatus('Could not find the sources list.', true);
+                    return;
+                }
+                this.setApiStatus('Finding a source with available live articles...');
+                this.loadFirstLiveSource(data.sources, 0, sourcesContainer, apiKey, searchId);
+            },
+            (error) => {
+                this.apiKeySubmit!.disabled = false;
+                this.setApiStatus(error.message, true);
+            },
+            apiKey
+        );
+    }
+
+    private enableDemoMode(): void {
+        this.liveSearchId += 1;
+        this.liveApiKey = null;
+        if (this.apiKeyInput) this.apiKeyInput.value = '';
+        if (this.demoButton) this.demoButton.hidden = true;
+        if (this.apiKeySubmit) this.apiKeySubmit.disabled = false;
+        this.initialSourceSearchCancelled = false;
+
+        const sourcesContainer = document.querySelector<HTMLElement>('.sources');
+        if (!sourcesContainer) {
+            this.setApiStatus('Could not find the sources list.', true);
+            return;
+        }
+
+        this.controller.invalidateNewsRequests();
+        sourcesContainer.removeAttribute('data-source');
+        sourcesContainer.removeAttribute('data-source-pending');
+        this.view.drawNews({ articles: [] });
+        this.setApiStatus('Loading demo news...');
+        this.controller.getSources(
+            (data) => {
+                if (data.status !== 'ok') {
+                    this.setApiStatus(data.message ?? 'Could not load demo sources.', true);
+                    return;
+                }
+
+                this.view.drawSources(data);
+                this.loadInitialSource(data.sources, sourcesContainer);
+            },
+            (error) => this.setApiStatus(error.message, true)
+        );
+    }
+
+    private setApiStatus(message: string, isError = false): void {
+        if (!this.apiStatus) return;
+        this.apiStatus.textContent = message;
+        this.apiStatus.classList.toggle('api-status--error', isError);
+    }
+
+    private loadInitialSource(sources: ISource[], sourcesContainer: HTMLElement): void {
+        if (this.initialSourceSearchCancelled) return;
+        const source = sources.find((item) => Boolean(item.id.trim()));
         if (!source) return;
 
-        this.controller.getNewsForSource(source.id, sourcesContainer, (data) => {
-            if (this.initialSourceSearchCancelled) return;
+        this.controller.getNewsForSource(
+            source.id,
+            sourcesContainer,
+            (data) => {
+                if (this.initialSourceSearchCancelled) return;
+                if (data.status === 'ok' && data.articles.length > 0) {
+                    this.view.selectSource(source.id);
+                    this.view.drawNews(data);
+                    this.setApiStatus('Showing demo news. Add your own API key above to load live sources.');
+                } else {
+                    this.setApiStatus(data.message ?? 'The demo source returned no articles.', true);
+                }
+            },
+            (error) => this.setApiStatus(error.message, true)
+        );
+    }
 
-            if (data.status === 'ok' && data.articles.length > 0) {
-                this.view.selectSource(source.id);
-                this.view.drawNews(data);
-                return;
-            }
+    private loadFirstLiveSource(
+        sources: ISource[],
+        startIndex: number,
+        sourcesContainer: HTMLElement,
+        apiKey: string,
+        searchId: number
+    ): void {
+        if (searchId !== this.liveSearchId) return;
 
-            this.loadInitialSource(sources, sourceIndex + 1, sourcesContainer);
-        });
+        const nextStartIndex = Math.min(startIndex + 20, sources.length);
+        const sourceBatch = sources.slice(startIndex, nextStartIndex).filter((source) => Boolean(source.id.trim()));
+        if (sourceBatch.length === 0) {
+            if (this.apiKeySubmit) this.apiKeySubmit.disabled = false;
+            this.setApiStatus('No live articles were found for the available sources.', true);
+            return;
+        }
+
+        this.controller.getNewsForSources(
+            sourceBatch.map((source) => source.id),
+            sourcesContainer,
+            (data) => {
+                if (searchId !== this.liveSearchId) return;
+
+                if (data.status === 'error') {
+                    if (this.apiKeySubmit) this.apiKeySubmit.disabled = false;
+                    this.setApiStatus(data.message ?? 'Could not load live articles.', true);
+                    return;
+                }
+
+                if (data.articles.length > 0) {
+                    let selectedSource: ISource | undefined;
+                    for (const article of data.articles) {
+                        selectedSource = sourceBatch.find(
+                            (source) =>
+                                source.id === article.source.id ||
+                                (!article.source.id && source.name === article.source.name)
+                        );
+                        if (selectedSource) break;
+                    }
+
+                    if (selectedSource) {
+                        const articles = data.articles.filter(
+                            (article) =>
+                                article.source.id === selectedSource.id ||
+                                (!article.source.id && article.source.name === selectedSource.name)
+                        );
+                        if (articles.length > 0) {
+                            this.liveApiKey = apiKey;
+                            this.view.drawSources({ status: 'ok', sources });
+                            if (this.apiKeyInput) this.apiKeyInput.value = '';
+                            if (this.demoButton) this.demoButton.hidden = false;
+                            sourcesContainer.setAttribute('data-source', selectedSource.id);
+                            this.view.selectSource(selectedSource.id);
+                            this.view.drawNews({ ...data, articles });
+                            if (this.apiKeySubmit) this.apiKeySubmit.disabled = false;
+                            this.setApiStatus(
+                                `Showing live news from ${selectedSource.name}. Your key stays in this tab's memory until you leave or reload.`
+                            );
+                            return;
+                        }
+                    }
+                }
+
+                this.loadFirstLiveSource(sources, nextStartIndex, sourcesContainer, apiKey, searchId);
+            },
+            (error) => {
+                if (searchId !== this.liveSearchId) return;
+                if (this.apiKeySubmit) this.apiKeySubmit.disabled = false;
+                this.setApiStatus(error.message, true);
+            },
+            apiKey
+        );
     }
 
     private isMobile(): boolean {

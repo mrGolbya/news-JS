@@ -16,6 +16,7 @@ export interface INewsResponse {
     status: 'ok' | 'error';
     totalResults: number;
     articles: INewsArticle[];
+    message?: string;
 }
 
 export interface ISource {
@@ -31,9 +32,12 @@ export interface ISource {
 export interface ISourcesResponse {
     status: 'ok' | 'error';
     sources: ISource[];
+    message?: string;
 }
 
 export enum NewsEndpoint {
+    MockSources = 'mocks/sources',
+    MockEverything = 'mocks/everything',
     Sources = 'sources',
     Everything = 'everything',
 }

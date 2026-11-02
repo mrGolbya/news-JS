@@ -117,6 +117,76 @@ header h1 {
     color: #69db7e;
 }
 
+.api-mode {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 16px 30px;
+    border: 1px solid #333;
+    background: #1e1f24;
+}
+
+.api-mode h2 {
+    margin: 0 0 12px;
+    font-size: 20px;
+}
+
+.api-key-form {
+    display: grid;
+    gap: 10px;
+}
+
+.api-key-form__controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.api-key-form input {
+    flex: 1 1 240px;
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid #666;
+    background: #17181c;
+    color: #fff;
+    font: inherit;
+}
+
+.api-key-form button {
+    padding: 10px 14px;
+    border: 1px solid #30c5ff;
+    background: transparent;
+    color: #70d6ff;
+    font: inherit;
+    cursor: pointer;
+}
+
+.api-key-form button:hover,
+.api-key-form button:focus-visible {
+    border-color: #69db7e;
+    color: #69db7e;
+}
+
+.api-key-form button:disabled {
+    cursor: wait;
+    opacity: 0.6;
+}
+
+.api-key-help,
+.api-status {
+    margin: 0;
+    color: #aaa;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+.api-status:not(:empty) {
+    color: #70d6ff;
+}
+
+.api-status--error {
+    color: #ff8a8a !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .sources-panel,
     .sources-overlay {
@@ -189,6 +259,19 @@ footer .copyright a:hover {
         flex-direction: column;
         gap: 15px;
         text-align: center;
+    }
+
+    .api-mode {
+        margin: 16px 15px;
+        padding: 14px;
+    }
+
+    .api-key-form__controls {
+        flex-direction: column;
+    }
+
+    .api-key-form button {
+        width: 100%;
     }
 }
 

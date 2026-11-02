@@ -50,6 +50,32 @@
         </aside>
 
         <main>
+            <section class="api-mode" aria-labelledby="api-mode-title">
+                <h2 id="api-mode-title">News mode</h2>
+                <form class="api-key-form">
+                    <label for="api-key">Optional: use your own News API key for live news</label>
+                    <div class="api-key-form__controls">
+                        <input
+                            id="api-key"
+                            name="news-api-key"
+                            type="text"
+                            autocomplete="off"
+                            autocapitalize="off"
+                            spellcheck="false"
+                            aria-describedby="api-key-help"
+                            placeholder="Enter your News API key"
+                        />
+                        <button class="api-key-submit" type="submit">Load live sources</button>
+                        <button class="api-demo-button" type="button" hidden>Return to demo news</button>
+                    </div>
+                    <p id="api-key-help" class="api-key-help">
+                        Demo news loads by default. For live news, your key is sent in the request URL to the third-party
+                        News API proxy, which may log it. This app keeps the key only in this tab's memory; use a key
+                        only if you trust the proxy.
+                    </p>
+                    <p class="api-status" role="status" aria-live="polite"></p>
+                </form>
+            </section>
             <div class="news"></div>
         </main>
 

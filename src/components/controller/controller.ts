@@ -2,16 +2,29 @@ import AppLoader from './appLoader';
 import { INewsResponse, ISourcesResponse, NewsEndpoint } from '../../types/index';
 
 class AppController extends AppLoader {
-    public getSources(callback: (data: ISourcesResponse) => void): void {
+    private newsRequestId = 0;
+
+    public getSources(
+        callback: (data: ISourcesResponse) => void,
+        errorCallback?: (error: Error) => void,
+        apiKey?: string
+    ): void {
         super.getResp(
             {
-                endpoint: NewsEndpoint.Sources,
+                endpoint: apiKey ? NewsEndpoint.Sources : NewsEndpoint.MockSources,
+                options: apiKey ? { apiKey } : {},
             },
-            callback
+            callback,
+            errorCallback
         );
     }
 
-    public getNews(e: Event, callback: (data: INewsResponse) => void): void {
+    public getNews(
+        e: Event,
+        callback: (data: INewsResponse) => void,
+        errorCallback?: (error: Error) => void,
+        apiKey?: string
+    ): void {
         const target = e.target as HTMLElement;
         const newsContainer = e.currentTarget as HTMLElement;
         const sourceItem = target.closest('.source__item');
@@ -22,29 +35,80 @@ class AppController extends AppLoader {
 
         const sourceId = sourceItem.getAttribute('data-source-id');
         if (sourceId) {
-            this.getNewsForSource(sourceId, newsContainer, callback);
+            this.getNewsForSource(sourceId, newsContainer, callback, errorCallback, apiKey);
         }
     }
 
     public getNewsForSource(
         sourceId: string,
         sourcesContainer: HTMLElement,
-        callback: (data: INewsResponse) => void
+        callback: (data: INewsResponse) => void,
+        errorCallback?: (error: Error) => void,
+        apiKey?: string
     ): void {
-        if (!sourceId || sourcesContainer.getAttribute('data-source') === sourceId) {
+        if (!sourceId) {
             return;
         }
 
-        sourcesContainer.setAttribute('data-source', sourceId);
-        super.getResp(
+        this.loadNews(sourceId, sourcesContainer, callback, errorCallback, apiKey, sourceId);
+    }
+
+    public getNewsForSources(
+        sourceIds: string[],
+        sourcesContainer: HTMLElement,
+        callback: (data: INewsResponse) => void,
+        errorCallback: (error: Error) => void,
+        apiKey: string
+    ): void {
+        const validSourceIds = sourceIds.filter((sourceId) => Boolean(sourceId.trim()));
+        if (validSourceIds.length === 0) return;
+
+        this.loadNews(validSourceIds.join(','), sourcesContainer, callback, errorCallback, apiKey);
+    }
+
+    private loadNews(
+        sourceFilter: string,
+        sourcesContainer: HTMLElement,
+        callback: (data: INewsResponse) => void,
+        errorCallback: ((error: Error) => void) | undefined,
+        apiKey: string | undefined,
+        selectedSourceId?: string
+    ): void {
+        if (
+            sourcesContainer.getAttribute('data-source') === selectedSourceId ||
+            sourcesContainer.getAttribute('data-source-pending') === sourceFilter
+        ) {
+            return;
+        }
+
+        const requestId = ++this.newsRequestId;
+        sourcesContainer.setAttribute('data-source-pending', sourceFilter);
+        super.getResp<INewsResponse>(
             {
-                endpoint: NewsEndpoint.Everything,
+                endpoint: apiKey ? NewsEndpoint.Everything : NewsEndpoint.MockEverything,
                 options: {
-                    sources: sourceId,
+                    sources: sourceFilter,
+                    ...(apiKey ? { apiKey } : {}),
                 },
             },
-            callback
+            (data) => {
+                if (requestId !== this.newsRequestId) return;
+                sourcesContainer.removeAttribute('data-source-pending');
+                if (data.status === 'ok' && selectedSourceId) {
+                    sourcesContainer.setAttribute('data-source', selectedSourceId);
+                }
+                callback(data);
+            },
+            (error) => {
+                if (requestId !== this.newsRequestId) return;
+                sourcesContainer.removeAttribute('data-source-pending');
+                errorCallback?.(error);
+            }
         );
+    }
+
+    public invalidateNewsRequests(): void {
+        this.newsRequestId += 1;
     }
 }
 
