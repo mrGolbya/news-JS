@@ -3,7 +3,7 @@ import { NewsCardProps } from '../../../types/index';
 
 class News {
     public draw(data: ReadonlyArray<Readonly<NewsCardProps>>): void {
-        const news: ReadonlyArray<Readonly<NewsCardProps>> = 
+        const news: ReadonlyArray<Readonly<NewsCardProps>> =
             data.length >= 10 ? data.filter((_, idx: number) => idx < 10) : data;
 
         const fragment: DocumentFragment = document.createDocumentFragment();
