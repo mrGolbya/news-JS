@@ -34,8 +34,8 @@ export interface ISourcesResponse {
 }
 
 export enum NewsEndpoint {
-    Sources = 'mocks/sources',
-    Everything = 'mocks/everything',
+    Sources = 'sources',
+    Everything = 'everything',
 }
 
 export type NewsCardProps = Pick<
