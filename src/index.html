@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,12 +8,51 @@
     </head>
     <body>
         <header>
+            <button
+                class="sources-toggle"
+                type="button"
+                aria-controls="sources-panel"
+                aria-expanded="false"
+                aria-label="Открыть панель источников"
+            >
+                <span class="sources-toggle__icon" aria-hidden="true"></span>
+                <span class="sources-toggle__text">sources</span>
+            </button>
             <h1>News Portal</h1>
         </header>
-        <main>
+
+        <button
+            class="sources-overlay"
+            type="button"
+            tabindex="-1"
+            aria-label="Закрыть панель источников"
+            hidden
+        ></button>
+
+        <aside
+            id="sources-panel"
+            class="sources-panel"
+            aria-label="sources news"
+            aria-hidden="true"
+            hidden
+        >
+            <div class="sources-panel__header">
+                <h2 class="sources-panel__title">sources</h2>
+                <button
+                    class="sources-panel__close"
+                    type="button"
+                    aria-label="Закрыть панель источников"
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
             <div class="sources buttons"></div>
+        </aside>
+
+        <main>
             <div class="news"></div>
         </main>
+
         <footer>
             <div class="footer-container">
                 <a class="rs-logo-link" href="https://rs.school/courses/javascript" target="_blank" rel="noopener noreferrer">
@@ -26,11 +65,10 @@
             </div>
         </footer>
 
-
         <template id="sourceItemTemp">
-            <div class="source__item">
+            <button type="button" class="source__item" aria-pressed="false">
                 <span class="source__item-name"></span>
-            </div>
+            </button>
         </template>
 
         <template id="newsItemTemp">
