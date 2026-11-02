@@ -13,7 +13,8 @@ class App {
     private panelOpen = false;
     private previousBodyOverflow = '';
     private lastFocused: HTMLElement | null = null;
-    private initialSourceLoaded = false;
+    private initialSourceSearchStarted = false;
+    private initialSourceSearchCancelled = false;
 
     constructor() {
         this.controller = new AppController();
@@ -34,6 +35,7 @@ class App {
                 const sourceId = sourceItem?.getAttribute('data-source-id') ?? null;
 
                 if (sourceId) {
+                    this.initialSourceSearchCancelled = true;
                     this.view.selectSource(sourceId);
                 }
 
@@ -64,23 +66,33 @@ class App {
 
         this.controller.getSources((data) => {
             const sources: ISource[] = data?.sources ?? [];
-            const firstSource = sources.find((s) => Boolean(s.id));
+            this.view.drawSources(data);
 
-            this.view.drawSources(data, firstSource ? firstSource.id : null);
-
-            if (firstSource && !this.initialSourceLoaded) {
-                this.loadInitialSource(firstSource.id);
+            const sourcesContainer = document.querySelector<HTMLElement>('.sources');
+            if (sourcesContainer && sources.length > 0 && !this.initialSourceSearchStarted) {
+                this.initialSourceSearchStarted = true;
+                this.loadInitialSource(sources, 0, sourcesContainer);
             }
         });
     }
 
-    private loadInitialSource(sourceId: string): void {
-        const sourcesContainer = document.querySelector<HTMLElement>('.sources');
-        if (!sourcesContainer || !sourceId) return;
+    private loadInitialSource(sources: ISource[], startIndex: number, sourcesContainer: HTMLElement): void {
+        if (this.initialSourceSearchCancelled) return;
 
-        this.initialSourceLoaded = true;
-        this.controller.getNewsForSource(sourceId, sourcesContainer, (data) => {
-            this.view.drawNews(data);
+        const sourceIndex = sources.findIndex((source, index) => index >= startIndex && Boolean(source.id.trim()));
+        const source = sources[sourceIndex];
+        if (!source) return;
+
+        this.controller.getNewsForSource(source.id, sourcesContainer, (data) => {
+            if (this.initialSourceSearchCancelled) return;
+
+            if (data.status === 'ok' && data.articles.length > 0) {
+                this.view.selectSource(source.id);
+                this.view.drawNews(data);
+                return;
+            }
+
+            this.loadInitialSource(sources, sourceIndex + 1, sourcesContainer);
         });
     }
 
