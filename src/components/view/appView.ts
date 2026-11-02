@@ -16,9 +16,13 @@ export class AppView {
         this.news.draw(values);
     }
 
-    public drawSources(data?: Partial<ISourcesResponse>): void {
+    public drawSources(data?: Partial<ISourcesResponse>, selectedId: string | null = null): void {
         const values = data?.sources ? data?.sources : [];
-        this.sources.draw(values);
+        this.sources.draw(values, selectedId);
+    }
+
+    public selectSource(sourceId: string): void {
+        this.sources.setSelected(sourceId);
     }
 }
 
