@@ -37,3 +37,8 @@ export enum NewsEndpoint {
     Sources = 'mocks/sources',
     Everything = 'mocks/everything',
 }
+
+export type NewsCardProps = Pick<
+    INewsArticle,
+    'source' | 'author' | 'title' | 'url' | 'urlToImage' | 'publishedAt' | 'description'
+>;
