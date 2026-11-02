@@ -26,6 +26,7 @@ class App {
         this.panel = document.getElementById('sources-panel');
         this.overlay = document.querySelector<HTMLButtonElement>('.sources-overlay');
         this.closeBtn = document.querySelector<HTMLButtonElement>('.sources-panel__close');
+        this.syncPanelLayout();
 
         const sourcesContainer = document.querySelector<HTMLElement>('.sources');
         if (sourcesContainer) {
@@ -55,14 +56,15 @@ class App {
             if (e.key === 'Escape' && this.panelOpen) {
                 e.preventDefault();
                 this.closePanel({ returnFocus: true });
+                return;
+            }
+
+            if (e.key === 'Tab' && this.panelOpen) {
+                this.trapPanelFocus(e);
             }
         });
 
-        window.addEventListener('resize', () => {
-            if (!this.isMobile() && this.panelOpen) {
-                this.closePanel({ returnFocus: false });
-            }
-        });
+        window.addEventListener('resize', () => this.syncPanelLayout());
 
         this.controller.getSources((data) => {
             const sources: ISource[] = data?.sources ?? [];
@@ -100,6 +102,67 @@ class App {
         return window.matchMedia('(max-width: 768px)').matches;
     }
 
+    private trapPanelFocus(e: KeyboardEvent): void {
+        if (!this.panel) return;
+
+        const focusableElements = Array.from(
+            this.panel.querySelectorAll<HTMLElement>(
+                'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+            )
+        ).filter((element) => element.getClientRects().length > 0);
+
+        if (focusableElements.length === 0) {
+            e.preventDefault();
+            return;
+        }
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+        const activeElement = document.activeElement;
+
+        if (e.shiftKey && (activeElement === firstElement || !this.panel.contains(activeElement))) {
+            e.preventDefault();
+            lastElement.focus();
+        } else if (!e.shiftKey && (activeElement === lastElement || !this.panel.contains(activeElement))) {
+            e.preventDefault();
+            firstElement.focus();
+        }
+    }
+
+    private syncPanelLayout(): void {
+        if (!this.panel || !this.overlay || !this.toggleBtn) return;
+
+        const activeElement = document.activeElement;
+        if (this.isMobile()) {
+            if (!this.panelOpen && this.panel.contains(activeElement)) {
+                this.toggleBtn.focus();
+            }
+
+            this.panel.hidden = !this.panelOpen;
+            this.panel.setAttribute('aria-hidden', String(!this.panelOpen));
+            this.overlay.hidden = !this.panelOpen;
+            this.toggleBtn.setAttribute('aria-expanded', String(this.panelOpen));
+            return;
+        }
+
+        if (this.panelOpen) {
+            document.body.style.overflow = this.previousBodyOverflow;
+            if (this.panel.contains(activeElement)) {
+                this.panel.querySelector<HTMLButtonElement>('.source__item--selected')?.focus();
+            }
+        }
+
+        this.panelOpen = false;
+        this.panel.hidden = false;
+        this.panel.classList.remove('sources-panel--open');
+        this.panel.setAttribute('aria-hidden', 'false');
+        this.panel.removeAttribute('role');
+        this.panel.removeAttribute('aria-modal');
+        this.overlay.hidden = true;
+        this.overlay.classList.remove('sources-overlay--visible');
+        this.toggleBtn.setAttribute('aria-expanded', 'false');
+    }
+
     private openPanel(): void {
         if (!this.panel || !this.toggleBtn || !this.overlay) return;
 
@@ -114,6 +177,8 @@ class App {
         });
 
         this.panel.setAttribute('aria-hidden', 'false');
+        this.panel.setAttribute('role', 'dialog');
+        this.panel.setAttribute('aria-modal', 'true');
         this.toggleBtn.setAttribute('aria-expanded', 'true');
 
         this.previousBodyOverflow = document.body.style.overflow;
@@ -130,6 +195,8 @@ class App {
         this.overlay.classList.remove('sources-overlay--visible');
 
         this.panel.setAttribute('aria-hidden', 'true');
+        this.panel.removeAttribute('role');
+        this.panel.removeAttribute('aria-modal');
         this.toggleBtn.setAttribute('aria-expanded', 'false');
 
         document.body.style.overflow = this.previousBodyOverflow;
