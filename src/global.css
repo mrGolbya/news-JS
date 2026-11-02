@@ -85,6 +85,10 @@ header h1 {
     transform: translateX(0);
 }
 
+.sources-panel[hidden] {
+    display: none;
+}
+
 .sources-panel__header {
     display: flex;
     align-items: center;
@@ -204,10 +208,6 @@ footer .copyright a:hover {
         border: 0;
         overflow: visible;
         z-index: auto;
-    }
-
-    .sources-panel[hidden] {
-        display: block;
     }
 
     .sources-panel__header {
