@@ -21,7 +21,16 @@ class News {
 
             const metaPhoto = newsClone.querySelector('.news__meta-photo') as HTMLElement;
             if (metaPhoto) {
-                metaPhoto.style.backgroundImage = `url(${item.urlToImage || 'img/news_placeholder.jpg'})`;
+                metaPhoto.classList.add('news__meta-photo--placeholder');
+
+                if (item.urlToImage) {
+                    const image = new Image();
+                    image.onload = () => {
+                        metaPhoto.style.backgroundImage = `url("${item.urlToImage}")`;
+                        metaPhoto.classList.remove('news__meta-photo--placeholder');
+                    };
+                    image.src = item.urlToImage;
+                }
             }
 
             const metaAuthor = newsClone.querySelector('.news__meta-author');
