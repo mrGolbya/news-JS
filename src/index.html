@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,22 +8,93 @@
     </head>
     <body>
         <header>
+            <button
+                class="sources-toggle"
+                type="button"
+                aria-controls="sources-panel"
+                aria-expanded="false"
+                aria-label="Открыть панель источников"
+            >
+                <span class="sources-toggle__icon" aria-hidden="true"></span>
+                <span class="sources-toggle__text">sources</span>
+            </button>
             <h1>News Portal</h1>
         </header>
-        <main>
+
+        <button
+            class="sources-overlay"
+            type="button"
+            tabindex="-1"
+            aria-label="Закрыть панель источников"
+            hidden
+        ></button>
+
+        <aside
+            id="sources-panel"
+            class="sources-panel"
+            aria-label="sources news"
+            aria-hidden="true"
+            hidden
+        >
+            <div class="sources-panel__header">
+                <h2 class="sources-panel__title">sources</h2>
+                <button
+                    class="sources-panel__close"
+                    type="button"
+                    aria-label="Закрыть панель источников"
+                >
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
             <div class="sources buttons"></div>
+        </aside>
+
+        <main>
+            <section class="api-mode" aria-labelledby="api-mode-title">
+                <h2 id="api-mode-title">News mode</h2>
+                <form class="api-key-form">
+                    <label for="api-key">Optional: use your own News API key for live news</label>
+                    <div class="api-key-form__controls">
+                        <input
+                            id="api-key"
+                            name="news-api-key"
+                            type="text"
+                            autocomplete="off"
+                            autocapitalize="off"
+                            spellcheck="false"
+                            aria-describedby="api-key-help"
+                            placeholder="Enter your News API key"
+                        />
+                        <button class="api-key-submit" type="submit">Load live sources</button>
+                        <button class="api-demo-button" type="button" hidden>Return to demo news</button>
+                    </div>
+                    <p id="api-key-help" class="api-key-help">
+                        Demo news loads by default. For live news, your key is sent in the request URL to the third-party
+                        News API proxy, which may log it. This app keeps the key only in this tab's memory; use a key
+                        only if you trust the proxy.
+                    </p>
+                    <p class="api-status" role="status" aria-live="polite"></p>
+                </form>
+            </section>
             <div class="news"></div>
         </main>
+
         <footer>
-            <p class="copyright">
-                Copyright <a href="https://newsapi.org">NewsAPI</a>
-            </p>
+            <div class="footer-container">
+                <a class="rs-logo-link" href="https://rs.school/courses/javascript" target="_blank" rel="noopener noreferrer">
+                    <img class="rs-logo-img" src="https://rs.school/_next/static/media/rss-logo.c19ce1b4.svg" alt="RS School Logo">
+                </a>
+                <div class="copyright">
+                    <span>2026</span>
+                    <a href="https://github.com/mrGolbya" target="_blank" rel="noopener noreferrer">mrGolbya</a>
+                </div>
+            </div>
         </footer>
 
         <template id="sourceItemTemp">
-            <div class="source__item">
+            <button type="button" class="source__item" aria-pressed="false">
                 <span class="source__item-name"></span>
-            </div>
+            </button>
         </template>
 
         <template id="newsItemTemp">

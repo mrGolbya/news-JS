@@ -31,6 +31,20 @@
     transition: transform 0.2s;
 }
 
+.news__item .news__meta-photo--placeholder {
+    background: linear-gradient(135deg, #30343b, #17181c);
+}
+
+.news__item .news__meta-photo--placeholder:after {
+    content: 'Image unavailable';
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    color: #c4c8ce;
+    font-size: 0.9rem;
+}
+
 .news__item .news__meta-details,
 .news__item .news__meta-details ul {
     margin: auto;
